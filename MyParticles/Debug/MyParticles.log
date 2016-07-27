@@ -1,0 +1,20 @@
+﻿FXC : warning X4717: Effects deprecated for D3DCompiler_47
+  
+  compilation object save succeeded; see E:\kodisoft\MyParticles\Debug\ParticleRender.cso
+FXC : warning X4717: Effects deprecated for D3DCompiler_47
+  
+  compilation object save succeeded; see E:\kodisoft\MyParticles\Debug\ParticleSolver.cso
+  stdafx.cpp
+  MyParticles.cpp
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(309): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(310): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(394): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(396): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(397): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(473): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(513): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(515): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  DDSTextureLoader.cpp
+  Generating Code...
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\Debug\MyParticles.exe
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\Debug\MyParticles.pdb (Partial PDB)

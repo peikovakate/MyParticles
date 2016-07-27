@@ -1,0 +1,17 @@
+﻿FXC : warning X4717: Effects deprecated for D3DCompiler_47
+  
+  compilation object save succeeded; see E:\kodisoft\MyParticles\x64\Release\ParticleRender.cso
+FXC : warning X4717: Effects deprecated for D3DCompiler_47
+  
+  compilation object save succeeded; see E:\kodisoft\MyParticles\x64\Release\ParticleSolver.cso
+  stdafx.cpp
+  DDSTextureLoader.cpp
+  MyParticles.cpp
+MyParticles.cpp(401): warning C4244: 'argument': conversion from 'int' to 'const float', possible loss of data
+MyParticles.cpp(473): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+MyParticles.cpp(517): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  Generating code
+  All 90 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Release\MyParticles.exe
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Release\MyParticles.pdb (Full PDB)

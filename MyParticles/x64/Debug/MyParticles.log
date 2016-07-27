@@ -1,0 +1,11 @@
+﻿  MyParticles.cpp
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(311): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(312): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(398): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(399): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(400): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(478): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(518): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(520): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Debug\MyParticles.exe
+  MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Debug\MyParticles.pdb (Partial PDB)
