@@ -120,28 +120,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Place code here.
-
-    // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_MYPARTICLES, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
-
-    // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
     }
-
 	if (FAILED(InitDevice()))
 	{
 		CleanupDevice();
 		return 0;
 	}
-
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYPARTICLES));
-
     MSG msg;
 
   //  // Main message loop:
@@ -159,7 +150,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
   //  }
 
   //  return (int) msg.wParam;
-
 	msg = { 0 };
 	while (WM_QUIT != msg.message)
 	{
@@ -173,12 +163,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			Render();
 		}
 	}
-
 	CleanupDevice();
-
 	return (int)msg.wParam;
-
-
 }
 
 //
@@ -240,7 +226,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    for (int i = 0; i< MAXPOINTS; i++) {
 	   points[i].x = -1;
 	   points[i].y = -1;
-	   idLookup[i] = -1;
    }
 
 
@@ -250,16 +235,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE:  Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -301,16 +276,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				for (int i = 0; i < static_cast<INT>(cInputs); i++) {
 					TOUCHINPUT ti = pInputs[i];
 					if (ti.dwID != 0) {
-						
 						ptInput.x = TOUCH_COORD_TO_PIXEL(ti.x);
 						ptInput.y = TOUCH_COORD_TO_PIXEL(ti.y);
 						ScreenToClient(hWnd, &ptInput);
 						RECT window;
 						GetWindowRect(hWnd, &window);
-						OutputDebugString(std::to_wstring(ptInput.x).c_str());
-						points[i].x = ((float)ptInput.x /(window.right - window.left)-0.5)*2;
-						points[i].y = -((float)ptInput.y/(window.bottom-window.top)-0.5)*2;
-						OutputDebugString(std::to_wstring(points[i].x).c_str());
+						if (ti.dwFlags & TOUCHEVENTF_UP) {
+							points[i].x = 10000;
+							points[i].y = 10000;
+						}
+						else {
+							points[i].x = ((float)ptInput.x / (window.right - window.left) - 0.5) * 2;
+							points[i].y = -((float)ptInput.y / (window.bottom - window.top) - 0.5) * 2;
+						}
+
+						
 					}
 				}
 			}
@@ -326,8 +306,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
-
-// Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -360,15 +338,13 @@ void CleanupDevice()
 }
 
 const FLOAT clearColor[4] = { 0, 0, 0, 1 };
-
-const int PARTICLES_COUNT = 600000;  
+const int PARTICLES_COUNT = 60000;  
 
 int _threadSize;
 struct Particle {
 	XMFLOAT3 Position;
-	XMFLOAT3 Velocity;
+	XMFLOAT3 Color;
 	XMFLOAT3 StartPosition;
-
 };
 Particle initialParticles[PARTICLES_COUNT];
 float Sensivity = 6;
@@ -387,63 +363,28 @@ void Update() {
 	//ID3DX11EffectPass* g_pass = g_ParticleSolverTechnique->GetPassByIndex(0);
 	//hr = g_pass->Apply(NULL, g_pImmediateContext);
 	//g_pImmediateContext->Dispatch(_threadSize, _threadSize, 1);
-	theta = 0;
-	distance = 0;
-	
+
 	for (int k = 0; k < PARTICLES_COUNT; k++) {
+		theta = 0;
+		distance = 0;
 		p = initialParticles[k].Position;
-		for (int j = 0; j <touchCount; j++) {
+		p.x += (cos(theta)*distance + (initialParticles[k].StartPosition.x - p.x)*0.05);
+		p.y += (sin(theta)*distance + (initialParticles[k].StartPosition.y - p.y)*0.05);
+		for (int j = 0; j < touchCount; j++) {
 			theta = atan2(p.y - points[j].y, p.x - points[j].x);
 			distance = Sensivity * 0.001 / sqrt((points[j].x - p.x)*(points[j].x - p.x)
 				+ (points[j].y - p.y)*(points[j].y - p.y));
 			p.x += (cos(theta)*distance + (initialParticles[k].StartPosition.x - p.x)*0.05);
 			p.y += (sin(theta)*distance + (initialParticles[k].StartPosition.y - p.y)*0.05);
 		}
-		
 		initialParticles[k].Position = p;
 	}
-
-	//creating buffer for initial particles
-	D3D11_BUFFER_DESC cbDesc = {};
-	cbDesc.ByteWidth = sizeof(Particle)*PARTICLES_COUNT;
-	cbDesc.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
-	//cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_UNORDERED_ACCESS & D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	cbDesc.CPUAccessFlags = 0;
-	cbDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	cbDesc.StructureByteStride = sizeof(Particle);
-
-	D3D11_SUBRESOURCE_DATA InitData = {};
-	InitData.pSysMem = &initialParticles;
-	InitData.SysMemPitch = sizeof(Particle)*PARTICLES_COUNT;
-	InitData.SysMemSlicePitch = 0;
-
-	hr = g_pd3dDevice->CreateBuffer(&cbDesc, &InitData, &solverParticles);
-	D3D11_SHADER_RESOURCE_VIEW_DESC svDesc = {};
-	svDesc.Buffer.NumElements = PARTICLES_COUNT;
-	svDesc.Buffer.FirstElement = 0;
-	svDesc.Format = DXGI_FORMAT_UNKNOWN;
-	svDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-
-	hr = g_pd3dDevice->CreateShaderResourceView(solverParticles, &svDesc, &g_particlesStructuredBufferView);
+	g_pImmediateContext->UpdateSubresource(solverParticles, 0, NULL, initialParticles, PARTICLES_COUNT * sizeof(Particle), 0);
 
 	//particle render
 	hr = g_particleSampler->SetSampler(0, g_samplerState);
 	hr = g_renderTexture->SetResource(g_textureView);
 	hr = g_particlesStructuredBuffer->SetResource(g_particlesStructuredBufferView);
-	
-	//D3D11_INPUT_ELEMENT_DESC layout[] =
-	//{
-	//	{ "SV_POSITION", 0, DXGI_FORMAT_R32G32B32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//};
-	//UINT numElements = ARRAYSIZE(layout);
-
-	//D3DX11_PASS_DESC PassDesc;
-	//hr = g_ParticleRenderTechnique->GetPassByIndex(0)->GetDesc(&PassDesc);
-	//hr = g_pd3dDevice->CreateInputLayout(layout, numElements, PassDesc.pIAInputSignature,
-	//	PassDesc.IAInputSignatureSize, &g_vertexLayout);
-	//
-	//g_pImmediateContext->IASetInputLayout(g_vertexLayout);
 
 	ID3DX11EffectPass* g_passRender = g_ParticleRenderTechnique->GetPassByIndex(0);
 	hr = g_passRender->Apply(NULL, g_pImmediateContext);
@@ -454,9 +395,7 @@ void Update() {
 
 void Render()
 {
-	
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, clearColor);
-	
 	Update();
 	g_pSwapChain->Present(1, 0);
 }
@@ -476,112 +415,19 @@ void Render()
 void createSetEffect() {
 
 	srand(time(0));
-
-	hr = D3DX11CompileEffectFromFile(L"ParticleSolver.fx", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		NULL, 0, g_pd3dDevice, &g_ParticleSolverEffect, nullptr);
-	g_ParticleSolverTechnique = g_ParticleSolverEffect->GetTechniqueByName("ParticleSolver");
-	D3DX11_EFFECT_DESC d;
-	auto gr = g_ParticleSolverEffect->GetDesc(&d);
-	//g_ParticleSolverTechnique = g_ParticleSolverEffect->GetTechniqueByIndex(0);
-	//bool b = g_ParticleSolverTechnique->IsValid();
-
 	hr = D3DX11CompileEffectFromFile(L"ParticleRender.fx", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, 
 		D3DCOMPILE_DEBUG 
 		, NULL, g_pd3dDevice, &g_ParticleRenderEffect, nullptr);
 	g_ParticleRenderTechnique = g_ParticleRenderEffect->GetTechniqueByName("ParticleRender");
-
-	//ID3DX11EffectTechnique
-
-	int numGroups = 0;
-
-	if (PARTICLES_COUNT % 768 != 0)
-	{
-		numGroups = (PARTICLES_COUNT / 768) + 1;
-	}
-	else
-	{
-		numGroups = PARTICLES_COUNT / 768;
-	}
-
-	double thirdRoot = pow((double)numGroups, (double)(1.0 / 2.0));
-	thirdRoot = ceil(thirdRoot);
-	_threadSize = _threadSize = _threadSize = (int)thirdRoot;
-
-
-	
-
-	int n = 34;
-	int k = n / 2;
-
+	int Nx = sqrt(16 * PARTICLES_COUNT / 9);
+	float xStep = 1.0 / Nx;
 	for (int i = 0; i < PARTICLES_COUNT; i++) {
-		//initialParticles[i].Position = XMFLOAT3((i % n - k)*100, (i / n - k)*100, 0);
-		initialParticles[i].Position = XMFLOAT3(((float)rand()/(RAND_MAX)-0.5)*2, ((float)rand() / (RAND_MAX)-0.5) * 2, 0);
+		initialParticles[i].Position = XMFLOAT3((i%Nx)*xStep*2-1,(i/Nx)*xStep*2*16/9-1,0);
 		initialParticles[i].StartPosition = initialParticles[i].Position;
-		initialParticles[i].Velocity = XMFLOAT3(sinf(i / PARTICLES_COUNT), cosf(i / PARTICLES_COUNT), 0);
-
-		//initialParticles[i].Position *= random.NextFloat(1f, 100f);
-		
+		initialParticles[i].Color = XMFLOAT3(sinf((i%Nx)*xStep * 2 - 1), cosf((i%Nx)*xStep * 2-1), 1);
 		float l = initialParticles[i].Position.x*initialParticles[i].Position.x+ initialParticles[i].Position.y*initialParticles[i].Position.y;
 		float angle = -atan2f(initialParticles[i].Position.x, initialParticles[i].Position.z);
-
-		initialParticles[i].Velocity = XMFLOAT3(cosf(angle), 0, sinf(angle)); //*5
 	}
-
-
-	////creating buffer for initial particles
-	//D3D11_BUFFER_DESC cbDesc = {};
-	//cbDesc.ByteWidth = sizeof(Particle)*PARTICLES_COUNT;
-	//cbDesc.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
-	////cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_UNORDERED_ACCESS & D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	//cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	//cbDesc.CPUAccessFlags = 0;
-	//cbDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	//cbDesc.StructureByteStride = sizeof(Particle);
-
-	//D3D11_BUFFER_DESC cbuavDesc = {};
-	//cbuavDesc.ByteWidth = sizeof(Particle)*PARTICLES_COUNT;
-	//cbuavDesc.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
-	////cbuavDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_UNORDERED_ACCESS & D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	//cbuavDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_UNORDERED_ACCESS;
-	//cbuavDesc.CPUAccessFlags = 0;
-	//cbuavDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	//cbuavDesc.StructureByteStride = sizeof(Particle);
-
-	//// Fill in the subresource data.
-	//D3D11_SUBRESOURCE_DATA InitData = {};
-	//InitData.pSysMem = &initialParticles;
-	//InitData.SysMemPitch = sizeof(Particle)*PARTICLES_COUNT;
-	//InitData.SysMemSlicePitch = 0;
-
-	//hr = g_pd3dDevice->CreateBuffer(&cbDesc, &InitData, &solverParticles);
-	//hr = g_pd3dDevice->CreateBuffer(&cbuavDesc, &InitData, &solverUAVParticles);
-
-	//D3D11_UNORDERED_ACCESS_VIEW_DESC uvDesc = {};
-	//uvDesc.Buffer.FirstElement = 0;
-	//uvDesc.Buffer.NumElements = PARTICLES_COUNT;
-	//uvDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_COUNTER;
-	//uvDesc.Format = DXGI_FORMAT_UNKNOWN;
-	//uvDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-
-	//D3D11_SHADER_RESOURCE_VIEW_DESC svDesc = {};
-	//svDesc.Buffer.NumElements = PARTICLES_COUNT;
-	//svDesc.Buffer.FirstElement = 0;
-	//svDesc.Format = DXGI_FORMAT_UNKNOWN;
-	//svDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	//
-
-	//hr = g_pd3dDevice->CreateUnorderedAccessView(solverUAVParticles, &uvDesc, &g_uav);
-	//hr = g_pd3dDevice->CreateShaderResourceView(solverParticles, &svDesc, &g_particlesStructuredBufferView);
-	//solverParticles->Release();
-	////setting solver shader
-	//g_groupDim = (g_ParticleSolverEffect->GetVariableByName("GroupDim"))->AsScalar();
-	//g_maxParticles = (g_ParticleSolverEffect->GetVariableByName("MaxParticles"))->AsScalar();
-	//g_sensivity = (g_ParticleSolverEffect->GetVariableByName("Sensivity"))->AsScalar();
-	////g_pointers = (g_ParticleSolverEffect->GetVariableByName("Pointers"))->AsConstantBuffer();
-	//g_pointersCount = (g_ParticleSolverEffect->GetVariableByName("PointersCount"))->AsScalar();
-	//g_particlesUAV = (g_ParticleSolverEffect->GetVariableByName("Particles"))->AsUnorderedAccessView();
-
-
 	//setting render shader
 	g_view = (g_ParticleRenderEffect->GetVariableByName("View"))->AsMatrix();
 	g_projection = (g_ParticleRenderEffect->GetVariableByName("Projection"))->AsMatrix();
@@ -597,39 +443,31 @@ void createSetEffect() {
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	
 	hr = g_pd3dDevice->CreateSamplerState(&sampDesc, &g_samplerState);
-
-	//loading texture
-	//hr = CreateWICTextureFromFile(g_pd3dDevice, g_immediateContext, L"Particle16x16.dds", &g_textureResource, &g_textureView);
 	hr = CreateDDSTextureFromFile(g_pd3dDevice, L"Particle16x16.dds", &g_textureResource,&g_textureView);
-	//hr = g_particlesUAV->SetUnorderedAccessView(g_uav);
 
-	//g_pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
-	//g_world = XMMatrixIdentity();
-	//g_Camera.SetViewParams(s_Eye, s_At);	
+	D3D11_BUFFER_DESC cbDesc = {};
+	cbDesc.ByteWidth = sizeof(Particle)*PARTICLES_COUNT;
+	cbDesc.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
+	cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
+	cbDesc.CPUAccessFlags = 0;
+	cbDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	cbDesc.StructureByteStride = sizeof(Particle);
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem = &initialParticles;
+	InitData.SysMemPitch = sizeof(Particle)*PARTICLES_COUNT;
+	InitData.SysMemSlicePitch = 0;
+
+	hr = g_pd3dDevice->CreateBuffer(&cbDesc, &InitData, &solverParticles);
+	
+	D3D11_SHADER_RESOURCE_VIEW_DESC svDesc = {};
+	svDesc.Buffer.NumElements = PARTICLES_COUNT;
+	svDesc.Buffer.FirstElement = 0;
+	svDesc.Format = DXGI_FORMAT_UNKNOWN;
+	svDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	hr = g_pd3dDevice->CreateShaderResourceView(solverParticles, &svDesc, &g_particlesStructuredBufferView);
+
 }
-
-
-
-//D3DX11_PASS_DESC PassDesc;
-//V_RETURN(g_pTechnique->GetPassByIndex(0)->GetDesc(&PassDesc));
-//V_RETURN(pd3dDevice->CreateInputLayout(layout, numElements, PassDesc.pIAInputSignature,
-//	PassDesc.IAInputSignatureSize, &g_pVertexLayout));
-//
-//// Set the input layout
-//pd3dImmediateContext->IASetInputLayout(g_pVertexLayout);
-//
-//// Load the mesh
-//V_RETURN(g_Mesh.Create(pd3dDevice, L"Tiny\\tiny.sdkmesh"));
-//
-//// Initialize the world matrices
-//g_World = XMMatrixIdentity();
-//
-//// Setup the camera's view parameters
-//static const XMVECTORF32 s_Eye = { 0.0f, 3.0f, -800.0f, 0.f };
-//static const XMVECTORF32 s_At = { 0.0f, 1.0f, 0.0f, 0.f };
-//g_Camera.SetViewParams(s_Eye, s_At);
-
-
 
 HRESULT InitDevice()
 	{
