@@ -19,29 +19,21 @@
 #include <windowsx.h>   // included for point conversion
 #include <string>
 #define MAXPOINTS 50
-
-
 struct Pointer {
 	float x;
 	float y;
 };
-
-
-// You will use this array to track touch points
+// to track touch points
 Pointer points[MAXPOINTS];
-
-
 UINT cInputs;
 PTOUCHINPUT pInputs;
 POINT ptInput;
-int idLookup[MAXPOINTS];
 int touchCount = 0;
-// For tracking dwId to points
-int index;
 
+const int SensivityMode1 = 1;
+const int SensivityMode2 = -6;
 
 using namespace DirectX;
-
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -59,48 +51,49 @@ ID3D11DeviceContext1*   g_pImmediateContext1 = nullptr;
 IDXGISwapChain*         g_pSwapChain = nullptr;
 IDXGISwapChain1*        g_pSwapChain1 = nullptr;
 ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
-
 ID3D11DeviceContext*	g_immediateContext;
-XMMATRIX	g_world;
-
 HRESULT hr;
 
+//for particleSolver
+//---------------------------------------------------
+//out
+ID3D11UnorderedAccessView *g_particlesUAV;
+ID3DX11EffectUnorderedAccessViewVariable *g_particlesUAVVariavle;
 
-//particleSolver
-//------------------------------------
 ID3DX11Effect *g_ParticleSolverEffect;
 ID3DX11EffectTechnique *g_ParticleSolverTechnique;
-ID3DX11EffectScalarVariable *g_groupDim;
-ID3DX11EffectScalarVariable *g_sensivity;
+
+//in
+ID3DX11EffectShaderResourceVariable *g_computedParticlesBufferResourse;
+ID3D11ShaderResourceView* g_computedParticlesBufferView;
+
+ID3DX11EffectScalarVariable *g_Sensivity;
 ID3DX11EffectScalarVariable *g_maxParticles;
 ID3DX11EffectScalarVariable *g_pointersCount;
-ID3DX11EffectVectorVariable *g_attractor;
-ID3DX11EffectConstantBuffer *g_pointers;
 
-ID3D11Buffer *solverUAVParticles;
-ID3D11UnorderedAccessView *g_uav;
-ID3DX11EffectUnorderedAccessViewVariable *g_particlesUAV;
-//------------------------------------
+ID3DX11EffectShaderResourceVariable *g_pointersBufferResourse;
+ID3D11ShaderResourceView* g_pointersBufferView;
+
+//buffers
+ID3D11Buffer *g_particlesBufferIN;
+ID3D11Buffer *g_particlesBufferOUT;
+ID3D11Buffer *g_pointersBuffer;
+
 
 //particleRender 
 //------------------------------------
 ID3DX11Effect *g_ParticleRenderEffect;
 ID3DX11EffectTechnique *g_ParticleRenderTechnique;
-ID3D11Buffer *solverParticles;
-ID3DX11EffectMatrixVariable *g_view;
-ID3DX11EffectMatrixVariable *g_projection;
-
 ID3DX11EffectSamplerVariable *g_particleSampler;
 ID3D11Texture2D *g_texture;
 ID3DX11EffectShaderResourceVariable *g_renderTexture;
 ID3D11SamplerState *g_samplerState;
-ID3D11InputLayout *g_vertexLayout;
-
-ID3DX11EffectShaderResourceVariable *g_particlesStructuredBuffer;
-ID3D11ShaderResourceView* g_particlesStructuredBufferView;
+//ID3D11InputLayout *g_vertexLayout; ????
 ID3D11Resource *g_textureResource;
 ID3D11ShaderResourceView *g_textureView;
-
+//in
+ID3DX11EffectShaderResourceVariable *g_ParticlesBufferResourse;
+ID3D11ShaderResourceView* g_ParticlesBufferView;
 //------------------------------------
 
 // Forward declarations of functions included in this code module:
@@ -110,8 +103,10 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void CleanupDevice();
 void Render();
+void createSetEffect();
 HRESULT InitDevice();
 
+int counter = 0;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -167,11 +162,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -192,26 +182,14 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     return RegisterClassExW(&wcex);
 }
-
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
-
-   //g_hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-   //   CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-
    g_hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	   0, 0, 3840, 2160, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+
+  /* g_hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+	   0, 0, 3840, 2160, nullptr, nullptr, hInstance, nullptr);*/
 
    if (!g_hWnd)
    {
@@ -234,7 +212,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    return TRUE;
 }
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -324,7 +301,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
-
 void CleanupDevice()
 {
 	if (g_pImmediateContext) g_pImmediateContext->ClearState();
@@ -335,139 +311,224 @@ void CleanupDevice()
 	if (g_pImmediateContext) g_pImmediateContext->Release();
 	if (g_pd3dDevice1) g_pd3dDevice1->Release();
 	if (g_pd3dDevice) g_pd3dDevice->Release();
+	if (g_computedParticlesBufferResourse)g_computedParticlesBufferResourse->Release();
+	if (g_computedParticlesBufferView)g_computedParticlesBufferView->Release();
+	if (g_particlesBufferIN)g_particlesBufferIN->Release();
+	if (g_particlesBufferOUT)g_particlesBufferOUT->Release();
+	if (g_particlesUAV)g_particlesUAV->Release();
+	if (g_particlesUAVVariavle)g_particlesUAVVariavle->Release();
+	if (g_pointersBuffer)g_pointersBuffer->Release();
+
 }
 
 const FLOAT clearColor[4] = { 0, 0, 0, 1 };
-const int PARTICLES_COUNT = 60000;  
+const int PARTICLES_COUNT = 200000;  
 
-int _threadSize;
 struct Particle {
 	XMFLOAT3 Position;
 	XMFLOAT3 Color;
 	XMFLOAT3 StartPosition;
 };
-Particle initialParticles[PARTICLES_COUNT];
-float Sensivity = 6;
-float theta = 0;
-float distance = 0;
-XMFLOAT3 p;
-void Update() {
-	//
-	//POINT p;
-	//GetCursorPos(&p);
-	//hr = g_groupDim->SetFloat(_threadSize);
-	//hr = g_maxParticles->SetInt(PARTICLES_COUNT);
-	//hr = g_sensivity->SetFloat(6);
-	//hr = g_pointersCount->SetInt(touchCount);
-	//
-	//ID3DX11EffectPass* g_pass = g_ParticleSolverTechnique->GetPassByIndex(0);
-	//hr = g_pass->Apply(NULL, g_pImmediateContext);
-	//g_pImmediateContext->Dispatch(_threadSize, _threadSize, 1);
+Particle particlesArray[PARTICLES_COUNT];
+float Sensivity = SensivityMode1;
 
-	for (int k = 0; k < PARTICLES_COUNT; k++) {
-		theta = 0;
-		distance = 0;
-		p = initialParticles[k].Position;
-		p.x += (cos(theta)*distance + (initialParticles[k].StartPosition.x - p.x)*0.05);
-		p.y += (sin(theta)*distance + (initialParticles[k].StartPosition.y - p.y)*0.05);
-		for (int j = 0; j < touchCount; j++) {
-			theta = atan2(p.y - points[j].y, p.x - points[j].x);
-			distance = Sensivity * 0.001 / sqrt((points[j].x - p.x)*(points[j].x - p.x)
-				+ (points[j].y - p.y)*(points[j].y - p.y));
-			p.x += (cos(theta)*distance + (initialParticles[k].StartPosition.x - p.x)*0.05);
-			p.y += (sin(theta)*distance + (initialParticles[k].StartPosition.y - p.y)*0.05);
-		}
-		initialParticles[k].Position = p;
-	}
-	g_pImmediateContext->UpdateSubresource(solverParticles, 0, NULL, initialParticles, PARTICLES_COUNT * sizeof(Particle), 0);
-
-	//particle render
-	hr = g_particleSampler->SetSampler(0, g_samplerState);
-	hr = g_renderTexture->SetResource(g_textureView);
-	hr = g_particlesStructuredBuffer->SetResource(g_particlesStructuredBufferView);
-
-	ID3DX11EffectPass* g_passRender = g_ParticleRenderTechnique->GetPassByIndex(0);
-	hr = g_passRender->Apply(NULL, g_pImmediateContext);
-	g_pImmediateContext->Draw(PARTICLES_COUNT, 0);
-	
-}
-
-
-void Render()
-{
-	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, clearColor);
-	Update();
-	g_pSwapChain->Present(1, 0);
-}
-
-
-
-//
-//struct Particle {
-//	XMFLOAT3 Position;
-//	XMFLOAT3 Velocity;
-//	XMFLOAT3 StartPosition;
-//};
-
-
-
-
-void createSetEffect() {
-
-	srand(time(0));
-	hr = D3DX11CompileEffectFromFile(L"ParticleRender.fx", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, 
-		D3DCOMPILE_DEBUG 
-		, NULL, g_pd3dDevice, &g_ParticleRenderEffect, nullptr);
-	g_ParticleRenderTechnique = g_ParticleRenderEffect->GetTechniqueByName("ParticleRender");
-	int Nx = sqrt(16 * PARTICLES_COUNT / 9);
-	float xStep = 1.0 / Nx;
-	for (int i = 0; i < PARTICLES_COUNT; i++) {
-		initialParticles[i].Position = XMFLOAT3((i%Nx)*xStep*2-1,(i/Nx)*xStep*2*16/9-1,0);
-		initialParticles[i].StartPosition = initialParticles[i].Position;
-		initialParticles[i].Color = XMFLOAT3(sinf((i%Nx)*xStep * 2 - 1), cosf((i%Nx)*xStep * 2-1), 1);
-		float l = initialParticles[i].Position.x*initialParticles[i].Position.x+ initialParticles[i].Position.y*initialParticles[i].Position.y;
-		float angle = -atan2f(initialParticles[i].Position.x, initialParticles[i].Position.z);
-	}
-	//setting render shader
-	g_view = (g_ParticleRenderEffect->GetVariableByName("View"))->AsMatrix();
-	g_projection = (g_ParticleRenderEffect->GetVariableByName("Projection"))->AsMatrix();
-	g_particleSampler = (g_ParticleRenderEffect->GetVariableByName("ParticleSampler"))->AsSampler();
-	g_particlesStructuredBuffer = (g_ParticleRenderEffect->GetVariableByName("Particles"))->AsShaderResource();
-	g_renderTexture = (g_ParticleRenderEffect->GetVariableByName("ParticleTexture"))->AsShaderResource();
-
-	//creating sampler state
+void loadSamplerAndTexture() {
 	D3D11_SAMPLER_DESC sampDesc = {};
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	
 	hr = g_pd3dDevice->CreateSamplerState(&sampDesc, &g_samplerState);
-	hr = CreateDDSTextureFromFile(g_pd3dDevice, L"Particle16x16.dds", &g_textureResource,&g_textureView);
-
-	D3D11_BUFFER_DESC cbDesc = {};
-	cbDesc.ByteWidth = sizeof(Particle)*PARTICLES_COUNT;
-	cbDesc.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
-	cbDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-	cbDesc.CPUAccessFlags = 0;
-	cbDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	cbDesc.StructureByteStride = sizeof(Particle);
-
-	D3D11_SUBRESOURCE_DATA InitData = {};
-	InitData.pSysMem = &initialParticles;
-	InitData.SysMemPitch = sizeof(Particle)*PARTICLES_COUNT;
-	InitData.SysMemSlicePitch = 0;
-
-	hr = g_pd3dDevice->CreateBuffer(&cbDesc, &InitData, &solverParticles);
-	
-	D3D11_SHADER_RESOURCE_VIEW_DESC svDesc = {};
-	svDesc.Buffer.NumElements = PARTICLES_COUNT;
-	svDesc.Buffer.FirstElement = 0;
-	svDesc.Format = DXGI_FORMAT_UNKNOWN;
-	svDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	hr = g_pd3dDevice->CreateShaderResourceView(solverParticles, &svDesc, &g_particlesStructuredBufferView);
-
+	hr = CreateDDSTextureFromFile(g_pd3dDevice, L"Particle16x16.dds", &g_textureResource, &g_textureView);
 }
+void createInBuffer() {
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc.ByteWidth = sizeof(Particle) * PARTICLES_COUNT;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.StructureByteStride = sizeof(Particle);
+	D3D11_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = particlesArray;
+	hr = g_pd3dDevice->CreateBuffer(&desc, &InitData, &g_particlesBufferIN);
+}
+void createOutBuffer() {
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc.ByteWidth = sizeof(Particle) * PARTICLES_COUNT;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.StructureByteStride = sizeof(Particle);
+	D3D11_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = particlesArray; // maybe null ???
+	hr = g_pd3dDevice->CreateBuffer(&desc, &InitData, &g_particlesBufferOUT);
+}
+void CreateComputeBufferSRV() {
+	D3D11_BUFFER_DESC descBuf;
+	ZeroMemory(&descBuf, sizeof(descBuf));
+	g_particlesBufferIN->GetDesc(&descBuf);
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+	desc.BufferEx.FirstElement = 0;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.BufferEx.NumElements = descBuf.ByteWidth / descBuf.StructureByteStride;
+	hr = g_pd3dDevice->CreateShaderResourceView(g_particlesBufferIN, &desc, &g_computedParticlesBufferView);
+}
+void CreateRenderBufferSRV() {
+	D3D11_BUFFER_DESC descBuf;
+	ZeroMemory(&descBuf, sizeof(descBuf));
+	g_particlesBufferIN->GetDesc(&descBuf);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+	desc.BufferEx.FirstElement = 0;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.BufferEx.NumElements = descBuf.ByteWidth / descBuf.StructureByteStride;
+	hr = g_pd3dDevice->CreateShaderResourceView(g_particlesBufferIN, &desc, &g_ParticlesBufferView);
+}
+void CreateBufferUAV() {
+	D3D11_BUFFER_DESC descBuf;
+	ZeroMemory(&descBuf, sizeof(descBuf));
+	g_particlesBufferOUT->GetDesc(&descBuf);
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	desc.Buffer.FirstElement = 0;
+
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.Buffer.NumElements = descBuf.ByteWidth / descBuf.StructureByteStride;
+
+	hr = g_pd3dDevice->CreateUnorderedAccessView(g_particlesBufferOUT, &desc, &g_particlesUAV);
+}
+void createPointerBuffer() {
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.ByteWidth = sizeof(Pointer) * MAXPOINTS;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.StructureByteStride = sizeof(Pointer);
+	D3D11_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = points;
+	hr = g_pd3dDevice->CreateBuffer(&desc, &InitData, &g_pointersBuffer);
+}
+void createPointerBufferSRV() {
+	D3D11_BUFFER_DESC descBuf;
+	ZeroMemory(&descBuf, sizeof(descBuf));
+	g_pointersBuffer->GetDesc(&descBuf);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+	desc.BufferEx.FirstElement = 0;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.BufferEx.NumElements = descBuf.ByteWidth / descBuf.StructureByteStride;
+	hr = g_pd3dDevice->CreateShaderResourceView(g_pointersBuffer, &desc, &g_pointersBufferView);
+}
+
+void createSetEffect() {
+	hr = D3DX11CompileEffectFromFile(L"ParticleSolver.fx", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		NULL, 0, g_pd3dDevice, &g_ParticleSolverEffect, nullptr);
+	g_ParticleSolverTechnique = g_ParticleSolverEffect->GetTechniqueByName("ParticleSolver");
+
+	hr = D3DX11CompileEffectFromFile(L"ParticleRender.fx", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, NULL, NULL, g_pd3dDevice, &g_ParticleRenderEffect, nullptr);
+	g_ParticleRenderTechnique = g_ParticleRenderEffect->GetTechniqueByName("ParticleRender");
+
+	//initializing starting position for particles
+	int Nx = sqrt(16 * PARTICLES_COUNT / 9);
+	float xStep = 1.0 / Nx;
+	for (int i = 0; i < PARTICLES_COUNT; i++) {
+		particlesArray[i].Position = XMFLOAT3((i%Nx)*xStep * 2 - 1, (i / Nx)*xStep * 2 * 16 / 9 - 1, 0);
+		particlesArray[i].StartPosition = particlesArray[i].Position;
+		particlesArray[i].Color = XMFLOAT3(sinf((i%Nx)*xStep * 2 - 1), cosf((i%Nx)*xStep * 2 - 1), 1);
+	}
+
+	//setting solver effect
+	g_computedParticlesBufferResourse = (g_ParticleSolverEffect->GetVariableByName("ParticlesIN"))->AsShaderResource();
+	g_particlesUAVVariavle = (g_ParticleSolverEffect->GetVariableByName("ParticlesOUT"))->AsUnorderedAccessView();
+	g_maxParticles = (g_ParticleSolverEffect->GetVariableByName("MaxParticles"))->AsScalar();
+	g_pointersCount = (g_ParticleSolverEffect->GetVariableByName("PointersCount"))->AsScalar();
+	g_Sensivity = (g_ParticleSolverEffect->GetVariableByName("Sensivity"))->AsScalar();
+	g_pointersBufferResourse = (g_ParticleSolverEffect->GetVariableByName("Pointers"))->AsShaderResource();
+
+	//setting render effect
+	g_particleSampler = (g_ParticleRenderEffect->GetVariableByName("ParticleSampler"))->AsSampler();
+	g_ParticlesBufferResourse = (g_ParticleRenderEffect->GetVariableByName("Particles"))->AsShaderResource();
+	g_renderTexture = (g_ParticleRenderEffect->GetVariableByName("ParticleTexture"))->AsShaderResource();
+
+	createInBuffer();
+	createOutBuffer();
+	createPointerBuffer();
+	CreateComputeBufferSRV();
+	CreateRenderBufferSRV();
+	CreateBufferUAV();
+	createPointerBuffer();
+	createPointerBufferSRV();
+
+	loadSamplerAndTexture();
+
+	hr = g_particleSampler->SetSampler(0, g_samplerState);
+	hr = g_renderTexture->SetResource(g_textureView);
+	hr = g_Sensivity->SetFloat(Sensivity);
+	hr = g_maxParticles->SetInt(PARTICLES_COUNT);
+}
+
+ID3D11Buffer* tempBuf;
+
+void Update() {
+	counter++;
+	if (counter == 2000) {
+		counter = 0;
+		Sensivity = (Sensivity == SensivityMode1) ? SensivityMode2 : SensivityMode1;
+		hr = g_Sensivity->SetFloat(Sensivity);
+	}
+
+	g_pImmediateContext->UpdateSubresource(g_pointersBuffer, 0, NULL, points, MAXPOINTS * sizeof(Pointer), 0);
+	hr = g_pointersCount->SetInt(touchCount);
+	hr = g_computedParticlesBufferResourse->SetResource(g_computedParticlesBufferView);
+	hr = g_particlesUAVVariavle->SetUnorderedAccessView(g_particlesUAV);
+	hr = g_pointersBufferResourse->SetResource(g_pointersBufferView);
+
+	ID3DX11EffectPass* g_pass = g_ParticleSolverTechnique->GetPassByIndex(0);
+	hr = g_pass->Apply(NULL, g_pImmediateContext);
+	g_pImmediateContext->Dispatch(PARTICLES_COUNT, 1, 1);
+
+	tempBuf = nullptr;
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	g_particlesBufferOUT->GetDesc(&desc);
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	desc.Usage = D3D11_USAGE_STAGING;
+	desc.BindFlags = 0;
+	desc.MiscFlags = 0;
+	g_pd3dDevice->CreateBuffer(&desc, nullptr, &tempBuf);
+	g_pImmediateContext->CopyResource(tempBuf, g_particlesBufferOUT);
+
+	D3D11_MAPPED_SUBRESOURCE MappedResource;
+	Particle *p;
+	g_pImmediateContext->Map(tempBuf, 0, D3D11_MAP_READ, 0, &MappedResource);
+	p = (Particle*)MappedResource.pData;
+
+	g_pImmediateContext->UpdateSubresource(g_particlesBufferIN, 0, NULL, p, PARTICLES_COUNT * sizeof(Particle), 0);
+	tempBuf->Release();
+
+	//particle render
+	hr = g_ParticlesBufferResourse->SetResource(g_ParticlesBufferView);
+	ID3DX11EffectPass* g_passRender = g_ParticleRenderTechnique->GetPassByIndex(0);
+	hr = g_passRender->Apply(NULL, g_pImmediateContext);
+	g_pImmediateContext->Draw(PARTICLES_COUNT, 0);
+	
+}
+void Render()
+{
+	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, clearColor);
+	Update();
+
+	g_pSwapChain->Present(1, 0);
+}
+
 
 HRESULT InitDevice()
 	{
@@ -475,10 +536,9 @@ HRESULT InitDevice()
 
 	RECT rc;
 	GetClientRect(g_hWnd, &rc);
-	//UINT width = rc.right - rc.left;
-	//UINT height = rc.bottom - rc.top;
-	UINT width = 3840;
-	UINT height = 2160;
+	UINT width = rc.right - rc.left;
+	UINT height = rc.bottom - rc.top;
+
 
 	UINT createDeviceFlags = 0;
 //#ifdef _DEBUG

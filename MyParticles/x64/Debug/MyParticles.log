@@ -1,13 +1,11 @@
-﻿  MyParticles.cpp
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(289): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(290): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(371): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(372): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(376): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(377): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(378): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(417): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(422): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-e:\kodisoft\myparticles\myparticles\myparticles.cpp(423): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+﻿FXC : warning X4717: Effects deprecated for D3DCompiler_47
+  
+  compilation object save succeeded; see E:\kodisoft\MyParticles\x64\Debug\ParticleRender.cso
+  MyParticles.cpp
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(266): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(267): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(441): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(442): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+e:\kodisoft\myparticles\myparticles\myparticles.cpp(485): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
   MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Debug\MyParticles.exe
   MyParticles.vcxproj -> E:\kodisoft\MyParticles\x64\Debug\MyParticles.pdb (Partial PDB)
